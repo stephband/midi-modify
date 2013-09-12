@@ -89,17 +89,55 @@
 		normalise(e);
 	}
 
+
+	// Node prototype
+
+	var proto = {
+		out: out1,
+		send: send
+	};
+
+	function out1(fn) {
+		// Override send with this listener function
+		this.send = fn;
+		this.out = out2;
+	}
+
+	function out2(fn) {
+		var listeners = [this.send, fn];
+
+		Object.defineProperty(this, 'listeners', {
+			value: listeners
+		});
+
+		this.out = out3;
+
+		// Fall back to prototype send
+		delete this.send;
+	}
+
+	function out3(fn) {
+		this.listeners.push(fn);
+	}
+
+	function send(message) {
+		if (!this.listeners) { return; }
+
+		var length = this.listeners.length,
+		    l = -1;
+
+		while (++l < length) {
+			this.listeners[l](message);
+		}
+	}
+
+
 	function Node(options) {
-		var node = Object.create(Object.prototype);
-		var send;
+		var node = Object.create(proto);
 
 		node.in = function(e) {
 			modify(e, options);
-			send(e);
-		};
-
-		node.out = function(fn) {
-			send = fn;
+			node.send(e);
 		};
 
 		return node;
